@@ -70,14 +70,16 @@ cc_binary(
 )
 
 cc_binary(
-    name = "object_detection",
+    name = "co_compiled_models_benchmark",
     testonly = 1,
-    srcs = ["object_detection.cc"],
+    srcs = [
+        "co_compiled_models_benchmark.cc"
+    ],
     deps = [
-        ":label_utils",
         ":model_utils",
         "//src/cpp:test_utils",
-        "//src/cpp/detection:engine",
+        "@libedgetpu//:header",
+        "@org_tensorflow//tensorflow/lite:framework",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
     ],

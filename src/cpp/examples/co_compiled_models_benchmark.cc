@@ -1,4 +1,7 @@
 // Benchmarking inferences on co-compiled models vs stand alone edgetpu models.
+// If the EdgeTpuManager detects 2 different TPUs, this program will isolate the "control"
+// models and the co-compile models into different TPUs, if it's a single TPUs, it switches
+// inferencing on a single TPU
 /*
  Example usage:
  1. Create directory: 
@@ -18,7 +21,7 @@
  8. cocompile the too tflite models: 
     cd /tmp/test_data && edgetpu_compiler co_inat_bird.tflite co_inat_plant.tflite
  9. cd /tmp/test_data && mogrify -format bmp *.jpg
- 10. Build and run `two_models_one_tpu`
+ 10. Build and run `co_compiled_models_benchmark`
 */
 // To reduce variation between different runs, one can disable CPU scaling with
 //   sudo cpupower frequency-set --governor performance
@@ -39,7 +42,7 @@
 void run(const edgetpu::EdgeTpuManager::DeviceEnumerationRecord& tpu, 
 		const std::string& bird_model_path, const std::string& plant_model_path, 
 		const std::string& bird_image_path, const std::string& plant_image_path, 
-		const int num_inferences, const std::string& model_type) {
+		const int num_inferences, const std::string& model_type, const int batch_size) {
   
   // read in models
   std::unique_ptr<tflite::FlatBufferModel> bird_model =
@@ -72,20 +75,30 @@ void run(const edgetpu::EdgeTpuManager::DeviceEnumerationRecord& tpu,
   std::vector<uint8_t> plant_input = coral::GetInputFromImage( 
       plant_image_path, coral::GetInputShape(*plant_interpreter, 0));
 
-  // Run inference alternately and report timing.
-  const int batch_size = 10;
-  int num_iterations = (num_inferences + batch_size - 1) / batch_size;
-
   // start timer
   const auto& start_time = std::chrono::steady_clock::now();
-  for (int i = 0; i < num_iterations; ++i) {
-    for (int j = 0; j < batch_size; ++j) {
-      coral::RunInference(bird_input, bird_interpreter.get());
+
+  if (batch_size) {
+    int num_iterations = (num_inferences + batch_size - 1) / batch_size;
+    std::cout << "batchsize: " << batch_size
+	      << " iterations: " << num_iterations << "\n";
+    // Run inference in batch_size alternately
+    for (int i = 0; i < num_iterations; ++i) {
+      for (int j = 0; j < batch_size; ++j) {
+        coral::RunInference(bird_input, bird_interpreter.get());
+      }
+      for (int j = 0; j < batch_size; ++j) {
+        coral::RunInference(plant_input, plant_interpreter.get());
+      }
     }
-    for (int j = 0; j < batch_size; ++j) {
+  } else {
+    // Run inference alternately
+    for (int i = 0; i < num_inferences; i++) {
+      coral::RunInference(bird_input, bird_interpreter.get());
       coral::RunInference(plant_input, plant_interpreter.get());
     }
   }
+
   std::chrono::duration<double> time_span =
       std::chrono::steady_clock::now() - start_time;
 
@@ -93,6 +106,9 @@ void run(const edgetpu::EdgeTpuManager::DeviceEnumerationRecord& tpu,
 	    << " models with " << num_inferences << " inferences" 
 	    << " costs: " << time_span.count() << " seconds." << std::endl;
 }
+
+
+ABSL_FLAG(int, batch_size, 0, "Batch size to run models alternately.");
 
 ABSL_FLAG(std::string, bird_model_path,
           "/tmp/test_data/inat_bird_edgetpu.tflite",
@@ -142,14 +158,13 @@ int main(int argc, char* argv[]) {
                     absl::GetFlag(FLAGS_plant_model_path),
                     absl::GetFlag(FLAGS_bird_image_path),
                     absl::GetFlag(FLAGS_plant_image_path),
-                    num_inferences, "control");
+                    num_inferences, "control", absl::GetFlag(FLAGS_batch_size));
 
     run(available_tpus.size() < 2 ? available_tpus[0] : available_tpus[1],
                     absl::GetFlag(FLAGS_co_compiled_bird_model_path), 
                     absl::GetFlag(FLAGS_co_compiled_plant_model_path), 
                     absl::GetFlag(FLAGS_bird_image_path), 
                     absl::GetFlag(FLAGS_plant_image_path), 
-                    num_inferences, "co-compiled");
-
+                    num_inferences, "co-compiled", absl::GetFlag(FLAGS_batch_size));
   }
 }

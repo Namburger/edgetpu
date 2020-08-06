@@ -95,15 +95,10 @@ tools:
 	      $(TOOLS_OUT_DIR)
 
 examples:
-	bazel build $(BAZEL_BUILD_FLAGS) //src/cpp/examples:two_models_one_tpu \
-	                                 //src/cpp/examples:two_models_two_tpus_threaded \
-	                                 //src/cpp/examples:classify_image \
-	                                 //src/cpp/examples:object_detection
+	bazel build $(BAZEL_BUILD_FLAGS) //src/cpp/examples:minimal
+
 	mkdir -p $(EXAMPLES_OUT_DIR)
-	cp -f $(BAZEL_OUT_DIR)/src/cpp/examples/two_models_one_tpu \
-	      $(BAZEL_OUT_DIR)/src/cpp/examples/two_models_two_tpus_threaded \
-	      $(BAZEL_OUT_DIR)/src/cpp/examples/classify_image \
-	      $(BAZEL_OUT_DIR)/src/cpp/examples/object_detection \
+	cp -f $(BAZEL_OUT_DIR)/src/cpp/examples/minimal \
 	      $(EXAMPLES_OUT_DIR)
 
 swig:

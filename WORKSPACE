@@ -26,29 +26,6 @@ http_archive(
     urls = ["https://github.com/bazelbuild/bazel-skylib/releases/download/0.8.0/bazel-skylib.0.8.0.tar.gz"],
 )  # https://github.com/bazelbuild/bazel-skylib/releases
 
-http_archive(
-    name = "com_google_glog",
-    # For security purpose, can use `sha256sum` on linux to calculate.
-    sha256 = "835888ec47ee8065b3098f3ec4373717d641954970f009833ed6d466c397409a",
-    strip_prefix = "glog-41f4bf9cbc3e8995d628b459f6a239df43c2b84a",
-    urls = [
-        "https://github.com/google/glog/archive/41f4bf9cbc3e8995d628b459f6a239df43c2b84a.tar.gz",
-    ],
-    build_file_content = """
-licenses(['notice'])
-load(':bazel/glog.bzl', 'glog_library')
-glog_library(with_gflags=0)
-""",
-)
-
-http_archive(
-  name = "com_github_google_benchmark",
-  sha256 = "59f918c8ccd4d74b6ac43484467b500f1d64b40cc1010daa055375b322a43ba3",
-  strip_prefix = "benchmark-16703ff83c1ae6d53e5155df3bb3ab0bc96083be",
-  urls = [
-    "https://github.com/google/benchmark/archive/16703ff83c1ae6d53e5155df3bb3ab0bc96083be.zip"
-  ],
-)
 
 http_archive(
     name = "org_tensorflow",
